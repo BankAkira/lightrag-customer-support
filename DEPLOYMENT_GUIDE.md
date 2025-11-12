@@ -94,26 +94,24 @@ Total 96GB VRAM allocation example:
 
 ## 🚀 Step 4: Deploy
 
-### 4.1 Make Scripts Executable
+### 4.1 Start Services
 ```bash
-chmod +x entrypoint.sh
-```
-
-### 4.2 Start Services
-```bash
-# Start all services
+# Start all services (automatically pulls official LightRAG image)
 docker-compose up -d
 
 # Check logs
 docker-compose logs -f
 
 # Wait for all services to be healthy (may take 5-10 minutes on first run)
+# LightRAG: official image pulled from ghcr.io/hkuds/lightrag:latest
 # vLLM will download Typhoon 2.5 model (~20GB)
 # Embedding service will download BGE-M3 (~2GB)
 # Reranker will download BGE Reranker (~1GB)
 ```
 
-### 4.3 Verify Services
+**Note**: The system uses pre-built official images - no building from source required!
+
+### 4.2 Verify Services
 ```bash
 # Check all containers are running
 docker-compose ps

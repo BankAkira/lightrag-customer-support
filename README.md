@@ -69,15 +69,14 @@ nano .env
 
 ### 3. Deploy
 ```bash
-# Make scripts executable
-chmod +x entrypoint.sh
-
-# Start all services
+# Start all services (will automatically pull official LightRAG image)
 docker-compose up -d
 
 # Watch logs (first run takes 5-10 mins to download models)
 docker-compose logs -f
 ```
+
+**Note**: No build required! The system uses pre-built official images.
 
 ### 4. Verify
 ```bash
@@ -227,13 +226,17 @@ See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for complete troubleshooting.
 ```
 .
 ├── docker-compose.yml          # Main deployment config
-├── Dockerfile                  # LightRAG server image
 ├── .env                       # Environment variables
-├── entrypoint.sh              # Startup script
+├── .env.example               # Environment variables template
+├── Dockerfile.custom           # Optional: Customize LightRAG image
+├── entrypoint.sh              # Optional: Custom startup script
 ├── api_client_example.py      # Python API client
 ├── DEPLOYMENT_GUIDE.md        # Full deployment guide
+├── CLAUDE.md                  # Development guide for Claude Code
 └── README.md                  # This file
 ```
+
+**Note**: The system uses the official LightRAG Docker image (`ghcr.io/hkuds/lightrag:latest`), so no building from source is required.
 
 ## 🤝 API Endpoints
 

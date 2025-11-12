@@ -24,46 +24,77 @@ class CustomerSupportRAG:
     def index_documents(self, documents: List[str], doc_ids: Optional[List[str]] = None) -> dict:
         """
         Index documents into LightRAG
-        
+
         Args:
             documents: List of document texts (Thai/English supported)
             doc_ids: Optional list of document IDs
-            
+
         Returns:
             Response from the API
+
+        Raises:
+            ValueError: If documents list is empty
+            requests.HTTPError: If API request fails
         """
+        if not documents:
+            raise ValueError("Documents list cannot be empty")
+
+        if doc_ids and len(doc_ids) != len(documents):
+            raise ValueError(f"Number of doc_ids ({len(doc_ids)}) must match number of documents ({len(documents)})")
+
         payload = {
             "documents": documents
         }
         if doc_ids:
             payload["doc_ids"] = doc_ids
-            
-        response = requests.post(
-            f"{self.api_url}/documents/index",
-            json=payload,
-            headers={"Content-Type": "application/json"}
-        )
-        return response.json()
+
+        try:
+            response = requests.post(
+                f"{self.api_url}/documents/index",
+                json=payload,
+                headers={"Content-Type": "application/json"},
+                timeout=300
+            )
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.HTTPError as e:
+            print(f"HTTP Error: {e}")
+            print(f"Response: {response.text}")
+            raise
+        except requests.exceptions.RequestException as e:
+            print(f"Request failed: {e}")
+            raise
     
     def query(
-        self, 
-        question: str, 
+        self,
+        question: str,
         mode: str = "hybrid",
         language: str = "auto",
         conversation_history: Optional[List[dict]] = None
     ) -> dict:
         """
         Query LightRAG for customer support
-        
+
         Args:
             question: Customer question in Thai or English
             mode: Query mode (local/global/hybrid/mix/naive)
             language: Response language preference
             conversation_history: Previous conversation context
-            
+
         Returns:
             Answer and context
+
+        Raises:
+            ValueError: If question is empty or mode is invalid
+            requests.HTTPError: If API request fails
         """
+        if not question or not question.strip():
+            raise ValueError("Question cannot be empty")
+
+        valid_modes = ["local", "global", "hybrid", "mix", "naive"]
+        if mode not in valid_modes:
+            raise ValueError(f"Invalid mode '{mode}'. Must be one of: {valid_modes}")
+
         payload = {
             "query": question,
             "mode": mode,
@@ -72,60 +103,143 @@ class CustomerSupportRAG:
             "enable_rerank": True,
             "response_type": "Multiple Paragraphs"
         }
-        
+
         if conversation_history:
             payload["conversation_history"] = conversation_history
-            
-        response = requests.post(
-            f"{self.api_url}/query",
-            json=payload,
-            headers={"Content-Type": "application/json"}
-        )
-        return response.json()
+
+        try:
+            response = requests.post(
+                f"{self.api_url}/query",
+                json=payload,
+                headers={"Content-Type": "application/json"},
+                timeout=120
+            )
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.HTTPError as e:
+            print(f"HTTP Error: {e}")
+            print(f"Response: {response.text}")
+            raise
+        except requests.exceptions.RequestException as e:
+            print(f"Request failed: {e}")
+            raise
     
     def stream_query(
-        self, 
-        question: str, 
+        self,
+        question: str,
         mode: str = "hybrid"
     ):
         """
         Stream query response from LightRAG
-        
+
         Args:
             question: Customer question
             mode: Query mode
-            
+
         Yields:
             Chunks of response text
+
+        Raises:
+            ValueError: If question is empty or mode is invalid
+            requests.HTTPError: If API request fails
         """
+        if not question or not question.strip():
+            raise ValueError("Question cannot be empty")
+
+        valid_modes = ["local", "global", "hybrid", "mix", "naive"]
+        if mode not in valid_modes:
+            raise ValueError(f"Invalid mode '{mode}'. Must be one of: {valid_modes}")
+
         payload = {
             "query": question,
             "mode": mode,
             "stream": True,
             "enable_rerank": True
         }
-        
-        response = requests.post(
-            f"{self.api_url}/query",
-            json=payload,
-            headers={"Content-Type": "application/json"},
-            stream=True
-        )
-        
-        for line in response.iter_lines():
-            if line:
-                yield line.decode('utf-8')
+
+        try:
+            response = requests.post(
+                f"{self.api_url}/query",
+                json=payload,
+                headers={"Content-Type": "application/json"},
+                stream=True,
+                timeout=120
+            )
+            response.raise_for_status()
+
+            for line in response.iter_lines():
+                if line:
+                    yield line.decode('utf-8')
+        except requests.exceptions.HTTPError as e:
+            print(f"HTTP Error: {e}")
+            if hasattr(response, 'text'):
+                print(f"Response: {response.text}")
+            raise
+        except requests.exceptions.RequestException as e:
+            print(f"Request failed: {e}")
+            raise
     
     def get_entities(self, entity_name: Optional[str] = None) -> dict:
-        """Get entities from knowledge graph"""
+        """
+        Get entities from knowledge graph
+
+        Args:
+            entity_name: Optional entity name filter
+
+        Returns:
+            Dictionary containing entities
+
+        Raises:
+            requests.HTTPError: If API request fails
+        """
         params = {"entity_name": entity_name} if entity_name else {}
-        response = requests.get(f"{self.api_url}/entities", params=params)
-        return response.json()
-    
+        try:
+            response = requests.get(
+                f"{self.api_url}/entities",
+                params=params,
+                timeout=30
+            )
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.HTTPError as e:
+            print(f"HTTP Error: {e}")
+            print(f"Response: {response.text}")
+            raise
+        except requests.exceptions.RequestException as e:
+            print(f"Request failed: {e}")
+            raise
+
     def delete_document(self, doc_id: str) -> dict:
-        """Delete a document by ID"""
-        response = requests.delete(f"{self.api_url}/documents/{doc_id}")
-        return response.json()
+        """
+        Delete a document by ID
+
+        Args:
+            doc_id: Document ID to delete
+
+        Returns:
+            Response from the API
+
+        Raises:
+            ValueError: If doc_id is empty
+            requests.HTTPError: If API request fails
+        """
+        if not doc_id or not doc_id.strip():
+            raise ValueError("Document ID cannot be empty")
+
+        try:
+            response = requests.delete(
+                f"{self.api_url}/documents/{doc_id}",
+                timeout=30
+            )
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.HTTPError as e:
+            print(f"HTTP Error: {e}")
+            print(f"Response: {response.text}")
+            raise
+        except requests.exceptions.RequestException as e:
+            print(f"Request failed: {e}")
+            raise
 
 
 # Example Usage

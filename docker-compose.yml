@@ -78,6 +78,11 @@ services:
               count: 1
               capabilities: [gpu]
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # PostgreSQL with pgvector
   postgres:
@@ -86,23 +91,21 @@ services:
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_DB=lightrag
-      - POSTGRES_USER=lightrag
-      - POSTGRES_PASSWORD=lightrag_password_change_me
+      - POSTGRES_DB=${POSTGRES_DATABASE:-lightrag}
+      - POSTGRES_USER=${POSTGRES_USER:-lightrag}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-CHANGE_ME_BEFORE_PRODUCTION}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U lightrag"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lightrag}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   # LightRAG Server
   lightrag:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/hkuds/lightrag:latest
     container_name: lightrag-server
     ports:
       - "9621:9621"
@@ -131,10 +134,10 @@ services:
       
       # PostgreSQL Configuration
       - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_USER=lightrag
-      - POSTGRES_PASSWORD=lightrag_password_change_me
-      - POSTGRES_DATABASE=lightrag
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_USER=${POSTGRES_USER:-lightrag}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-CHANGE_ME_BEFORE_PRODUCTION}
+      - POSTGRES_DATABASE=${POSTGRES_DATABASE:-lightrag}
       
       # LightRAG Configuration
       - WORKING_DIR=/app/lightrag_data
@@ -159,7 +162,15 @@ services:
         condition: service_healthy
       embedding:
         condition: service_healthy
+      reranker:
+        condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9621/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
 volumes:
   postgres_data:
