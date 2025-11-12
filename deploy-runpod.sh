@@ -9,13 +9,26 @@ echo "🚀 Deploying LightRAG Customer Support on RunPod..."
 # Load environment variables from .env file
 if [ -f .env ]; then
     echo "📋 Loading environment variables from .env..."
-    export $(grep -v '^#' .env | xargs)
+    # Use set -a to automatically export variables, then source the file
+    set -a
+    source <(grep -v '^#' .env | grep -v '^$')
+    set +a
 else
     echo "⚠️  .env file not found. Using defaults..."
-    export POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-CHANGE_ME_BEFORE_PRODUCTION}
-    export POSTGRES_USER=${POSTGRES_USER:-lightrag}
-    export POSTGRES_DATABASE=${POSTGRES_DATABASE:-lightrag}
 fi
+
+# Set defaults for critical variables
+export POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-CHANGE_ME_BEFORE_PRODUCTION}
+export POSTGRES_USER=${POSTGRES_USER:-lightrag}
+export POSTGRES_DATABASE=${POSTGRES_DATABASE:-lightrag}
+export ENTITY_TYPES=${ENTITY_TYPES:-'["organization", "person", "product", "service", "location", "event", "issue", "feature"]'}
+
+# Verify critical configuration
+echo "✅ Configuration loaded:"
+echo "   Database: ${POSTGRES_DATABASE}"
+echo "   User: ${POSTGRES_USER}"
+echo "   Password: ${POSTGRES_PASSWORD:0:3}*** (hidden)"
+echo ""
 
 # Create Docker network
 echo "🌐 Creating Docker network..."
@@ -154,8 +167,8 @@ docker run -d \
     -e MAX_EMBED_TOKENS=8192 \
     -e TOP_K=60 \
     -e CHUNK_TOP_K=20 \
-    -e LANGUAGE="Thai and English" \
-    -e ENTITY_TYPES='["organization", "person", "product", "service", "location", "event", "issue", "feature"]' \
+    -e LANGUAGE="${LANGUAGE:-Thai and English}" \
+    -e ENTITY_TYPES="${ENTITY_TYPES}" \
     -v $(pwd)/lightrag_data:/app/lightrag_data \
     -v $(pwd)/documents:/app/documents \
     --restart unless-stopped \
