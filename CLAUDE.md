@@ -34,9 +34,34 @@ On RTX Pro 6000 (96GB VRAM), the default allocation is:
 
 ## Common Commands
 
-### Development & Deployment
+### Deployment Options
+
+**Option 1: RunPod (No docker-compose)** - Recommended for RunPod environments
 
 ```bash
+# Deploy all services with plain Docker commands
+bash deploy-runpod.sh
+
+# Check status
+bash status-runpod.sh
+
+# View logs
+docker logs -f lightrag-server
+docker logs -f lightrag-vllm
+
+# Stop all services
+bash stop-runpod.sh
+
+# Clean up everything (WARNING: deletes data)
+bash cleanup-runpod.sh
+```
+
+**Option 2: Docker Compose** - Traditional deployment
+
+```bash
+# Install docker-compose if needed
+bash install-docker-compose.sh
+
 # Start all services
 docker-compose up -d
 
@@ -160,15 +185,24 @@ LightRAG supports different retrieval strategies:
 
 ```
 .
-├── docker-compose.yml          # Service orchestration (uses official images)
+├── docker-compose.yml          # Service orchestration (optional, uses official images)
 ├── Dockerfile.custom           # OPTIONAL: For customizing LightRAG image
 ├── .env                       # Configuration (CHANGE PASSWORDS!)
 ├── .env.example               # Template for environment variables
-├── entrypoint.sh              # OPTIONAL: Custom startup script (for reference)
 ├── api_client_example.py      # Python API client with examples
-├── DEPLOYMENT_GUIDE.md        # Detailed deployment guide
+│
+├── RUNPOD_GUIDE.md            # RunPod deployment guide (no docker-compose)
+├── DEPLOYMENT_GUIDE.md        # Deployment guide (with docker-compose)
 ├── README.md                  # Project overview
 ├── CLAUDE.md                  # This file
+│
+├── deploy-runpod.sh           # Deploy on RunPod (plain Docker, no compose)
+├── stop-runpod.sh             # Stop all RunPod services
+├── status-runpod.sh           # Check RunPod service status
+├── cleanup-runpod.sh          # Clean up all RunPod data
+├── install-docker-compose.sh  # Install docker-compose if needed
+├── entrypoint.sh              # OPTIONAL: Custom startup script (reference)
+│
 ├── lightrag_data/             # Working directory (created at runtime)
 ├── documents/                 # Document storage (created at runtime)
 └── models/                    # Model cache (created at runtime)

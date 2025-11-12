@@ -40,8 +40,24 @@ AI-powered customer support system using LightRAG with Thai + English language s
 
 ### Prerequisites
 - RunPod instance with RTX Pro 6000 (96GB VRAM)
-- Docker & Docker Compose
+- Docker (docker-compose is **optional** - we provide scripts that work without it!)
 - NVIDIA Docker runtime
+
+### 🎯 Two Deployment Methods
+
+**Method 1: RunPod (No docker-compose required)** ⭐ Recommended for RunPod
+```bash
+# See RUNPOD_GUIDE.md for complete instructions
+chmod +x deploy-runpod.sh
+bash deploy-runpod.sh
+```
+
+**Method 2: Traditional Docker Compose**
+```bash
+# Install docker-compose if needed
+bash install-docker-compose.sh
+docker-compose up -d
+```
 
 ### 1. Clone or Upload Files
 ```bash
@@ -225,15 +241,22 @@ See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for complete troubleshooting.
 
 ```
 .
-├── docker-compose.yml          # Main deployment config
+├── docker-compose.yml          # Docker Compose config (optional)
 ├── .env                       # Environment variables
 ├── .env.example               # Environment variables template
 ├── Dockerfile.custom           # Optional: Customize LightRAG image
-├── entrypoint.sh              # Optional: Custom startup script
-├── api_client_example.py      # Python API client
-├── DEPLOYMENT_GUIDE.md        # Full deployment guide
+├── api_client_example.py      # Python API client with examples
+│
+├── RUNPOD_GUIDE.md            # 🎯 RunPod deployment guide (NO docker-compose)
+├── DEPLOYMENT_GUIDE.md        # Full deployment guide (with docker-compose)
 ├── CLAUDE.md                  # Development guide for Claude Code
-└── README.md                  # This file
+├── README.md                  # This file
+│
+├── deploy-runpod.sh           # 🚀 Deploy on RunPod (no compose needed)
+├── stop-runpod.sh             # Stop all services
+├── status-runpod.sh           # Check service status
+├── cleanup-runpod.sh          # Clean up everything
+└── install-docker-compose.sh  # Install docker-compose if needed
 ```
 
 **Note**: The system uses the official LightRAG Docker image (`ghcr.io/hkuds/lightrag:latest`), so no building from source is required.
