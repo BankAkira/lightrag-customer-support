@@ -39,33 +39,75 @@ echo ""
 
 # Check if Docker daemon is running
 echo "🔄 Checking Docker daemon..."
-if docker ps &> /dev/null; then
+if docker ps &> /dev/null 2>&1; then
     echo "✅ Docker daemon is running"
+elif sudo docker ps &> /dev/null 2>&1; then
+    echo "✅ Docker daemon is running (requires sudo)"
+    echo "⚠️  Note: You'll need to use 'sudo' with Docker commands"
 else
     echo "⚠️  Docker daemon is not running"
-    echo "🔄 Starting Docker..."
+    echo "🔄 Attempting to start Docker..."
 
-    # Try different methods to start Docker
-    if command -v systemctl &> /dev/null; then
-        sudo systemctl start docker
-        sudo systemctl enable docker
-        echo "✅ Started Docker with systemctl"
-    elif command -v service &> /dev/null; then
-        sudo service docker start
-        echo "✅ Started Docker with service"
-    else
-        echo "❌ Could not start Docker automatically"
-        echo "   Please start Docker manually"
-        exit 1
+    # Try different methods to start Docker based on init system
+    DOCKER_STARTED=false
+
+    # Method 1: Direct service command (works on most systems)
+    if command -v service &> /dev/null; then
+        echo "   Trying: service docker start"
+        if sudo service docker start 2>/dev/null; then
+            sleep 3
+            if docker ps &> /dev/null 2>&1 || sudo docker ps &> /dev/null 2>&1; then
+                echo "✅ Started Docker with service command"
+                DOCKER_STARTED=true
+            fi
+        fi
+    fi
+
+    # Method 2: Init.d script (fallback)
+    if [ "$DOCKER_STARTED" = false ] && [ -f /etc/init.d/docker ]; then
+        echo "   Trying: /etc/init.d/docker start"
+        if sudo /etc/init.d/docker start 2>/dev/null; then
+            sleep 3
+            if docker ps &> /dev/null 2>&1 || sudo docker ps &> /dev/null 2>&1; then
+                echo "✅ Started Docker with init.d script"
+                DOCKER_STARTED=true
+            fi
+        fi
+    fi
+
+    # Method 3: Start dockerd directly (last resort)
+    if [ "$DOCKER_STARTED" = false ]; then
+        echo "   Trying: dockerd (background)"
+        if command -v dockerd &> /dev/null; then
+            sudo nohup dockerd > /tmp/dockerd.log 2>&1 &
+            sleep 5
+            if docker ps &> /dev/null 2>&1 || sudo docker ps &> /dev/null 2>&1; then
+                echo "✅ Started dockerd in background"
+                DOCKER_STARTED=true
+            fi
+        fi
     fi
 
     # Verify Docker is now running
-    sleep 2
-    if docker ps &> /dev/null; then
+    if [ "$DOCKER_STARTED" = true ]; then
         echo "✅ Docker is now running"
     else
-        echo "❌ Docker failed to start"
-        echo "   Check logs: sudo journalctl -u docker"
+        echo "❌ Could not start Docker automatically"
+        echo ""
+        echo "Please start Docker manually using one of these methods:"
+        echo ""
+        echo "Method 1 (recommended):"
+        echo "  sudo service docker start"
+        echo ""
+        echo "Method 2:"
+        echo "  sudo /etc/init.d/docker start"
+        echo ""
+        echo "Method 3:"
+        echo "  sudo dockerd &"
+        echo ""
+        echo "Then verify with:"
+        echo "  docker ps"
+        echo ""
         exit 1
     fi
 fi

@@ -2,6 +2,14 @@
 
 AI-powered customer support system using LightRAG with Thai + English language support, optimized for RunPod RTX Pro 6000.
 
+---
+
+## 🚀 **NEW TO RUNPOD? START HERE:** [`START_HERE.md`](START_HERE.md)
+
+**Having Docker errors?** See the simple 3-command guide in [`START_HERE.md`](START_HERE.md)
+
+---
+
 ## ✨ Features
 
 - 🌏 **Multilingual Support**: Thai and English (easily extensible)
@@ -47,11 +55,13 @@ AI-powered customer support system using LightRAG with Thai + English language s
 
 **Method 1: RunPod (No docker-compose required)** ⭐ Recommended for RunPod
 ```bash
-# First-time setup (checks Docker, GPU, disk space)
-bash setup-runpod.sh
+# Quick start (3 commands):
+sudo service docker start  # Start Docker
+bash deploy-runpod.sh      # Deploy everything
+bash status-runpod.sh      # Check status
 
-# Then deploy (see RUNPOD_GUIDE.md for complete instructions)
-bash deploy-runpod.sh
+# See RUNPOD_QUICKSTART.md for step-by-step guide
+# See RUNPOD_GUIDE.md for complete documentation
 ```
 
 **Method 2: Traditional Docker Compose**
