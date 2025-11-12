@@ -5,18 +5,21 @@ Deploy LightRAG Customer Support on RunPod **without docker-compose** in 3 simpl
 ## 🚀 Installation (30 seconds)
 
 ```bash
-# 1. Configure environment
+# 1. Setup RunPod environment (checks Docker, GPU, disk space)
+chmod +x *.sh
+bash setup-runpod.sh
+
+# 2. Configure environment
 cp .env.example .env
 nano .env  # Change POSTGRES_PASSWORD to something secure
 
-# 2. Validate configuration (optional but recommended)
+# 3. Validate configuration (optional but recommended)
 bash validate-env.sh
 
-# 3. Deploy everything (takes 5-10 minutes on first run)
-chmod +x *.sh
+# 4. Deploy everything (takes 5-10 minutes on first run)
 bash deploy-runpod.sh
 
-# 4. Check status
+# 5. Check status
 bash status-runpod.sh
 ```
 

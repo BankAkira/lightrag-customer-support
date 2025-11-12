@@ -13,6 +13,25 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
+# Check for common syntax issues
+echo "🔍 Checking for common syntax issues..."
+if grep -q "LANGUAGE=Thai and English" .env 2>/dev/null; then
+    echo "❌ ERROR: LANGUAGE value is not quoted!"
+    echo "   Found: LANGUAGE=Thai and English"
+    echo "   Should be: LANGUAGE=\"Thai and English\""
+    echo ""
+    echo "This will cause a 'and: command not found' error."
+    echo "Please add quotes around values with spaces."
+    exit 1
+fi
+
+if grep -q 'ENTITY_TYPES=\[' .env 2>/dev/null; then
+    if ! grep -q "ENTITY_TYPES='" .env 2>/dev/null; then
+        echo "⚠️  WARNING: ENTITY_TYPES should be quoted with single quotes"
+        echo "   Example: ENTITY_TYPES='[\"organization\", \"person\", ...]'"
+    fi
+fi
+
 # Test loading the .env file
 echo "📋 Testing environment variable loading..."
 

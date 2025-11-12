@@ -47,8 +47,10 @@ AI-powered customer support system using LightRAG with Thai + English language s
 
 **Method 1: RunPod (No docker-compose required)** ⭐ Recommended for RunPod
 ```bash
-# See RUNPOD_GUIDE.md for complete instructions
-chmod +x deploy-runpod.sh
+# First-time setup (checks Docker, GPU, disk space)
+bash setup-runpod.sh
+
+# Then deploy (see RUNPOD_GUIDE.md for complete instructions)
 bash deploy-runpod.sh
 ```
 

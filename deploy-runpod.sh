@@ -6,6 +6,47 @@ set -e
 
 echo "🚀 Deploying LightRAG Customer Support on RunPod..."
 
+# Check if Docker is installed and running
+echo "🔍 Checking Docker installation..."
+if ! command -v docker &> /dev/null; then
+    echo "❌ ERROR: Docker is not installed or not in PATH"
+    echo ""
+    echo "On RunPod, Docker should be pre-installed. Possible issues:"
+    echo ""
+    echo "1. Docker service is not started:"
+    echo "   sudo service docker start"
+    echo "   # or"
+    echo "   sudo systemctl start docker"
+    echo ""
+    echo "2. Docker not in PATH. Try:"
+    echo "   which docker"
+    echo "   export PATH=\$PATH:/usr/bin"
+    echo ""
+    echo "3. Need to install Docker (if really missing):"
+    echo "   curl -fsSL https://get.docker.com -o get-docker.sh"
+    echo "   sudo sh get-docker.sh"
+    echo ""
+    exit 1
+fi
+
+# Check if Docker daemon is running
+if ! docker ps &> /dev/null; then
+    echo "❌ ERROR: Docker daemon is not running"
+    echo ""
+    echo "Start Docker with:"
+    echo "  sudo service docker start"
+    echo "  # or"
+    echo "  sudo systemctl start docker"
+    echo ""
+    echo "Check Docker status:"
+    echo "  sudo service docker status"
+    echo ""
+    exit 1
+fi
+
+echo "✅ Docker is installed and running"
+docker --version
+
 # Load environment variables from .env file
 if [ -f .env ]; then
     echo "📋 Loading environment variables from .env..."
