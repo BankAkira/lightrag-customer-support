@@ -1,439 +1,481 @@
-# 🚀 RunPod Deployment Guide for LightRAG Customer Support
+# 🚀 LightRAG Customer Support - RunPod Deployment (No Docker)
 
-Complete guide for deploying LightRAG Customer Support on RunPod **without docker-compose**.
+Complete setup guide for deploying LightRAG-based customer support system on RunPod **without Docker**.
 
-## 📋 Prerequisites
+## 📋 What You'll Get
 
-- RunPod account with RTX Pro 6000 GPU pod (or similar)
-- SSH access to your RunPod instance
-- At least 200GB storage
-- At least 96GB VRAM (for Typhoon 2.5 + embeddings + reranker)
+✅ vLLM running Typhoon 2.5 (Thai/English LLM)  
+✅ BGE-M3 multilingual embeddings  
+✅ BGE Reranker V2 M3 for better results  
+✅ PostgreSQL with pgvector  
+✅ LightRAG server with Web UI  
+✅ All services managed via tmux sessions  
 
-## 🎯 Quick Start (3 Commands)
+## 🛠️ Step 1: Prepare RunPod Instance
 
-```bash
-# 1. Copy .env.example to .env and edit password
-cp .env.example .env
-nano .env  # Change POSTGRES_PASSWORD
-
-# 2. Make script executable and deploy
-chmod +x deploy-runpod.sh
-bash deploy-runpod.sh
-
-# 3. Check status
-bash status-runpod.sh
+### 1.1 Requirements
+```
+GPU: RTX Pro 6000 (96GB VRAM)
+vCPU: 16+ cores
+RAM: 64GB+
+Storage: 200GB+ SSD
+Template: PyTorch 2.x or CUDA 12.x
 ```
 
-That's it! The system will deploy using pure Docker commands (no docker-compose needed).
-
-## 📖 Detailed Deployment Steps
-
-### Step 1: Connect to RunPod
-
+### 1.2 Connect via SSH
 ```bash
-# SSH into your RunPod instance
-ssh root@<your-runpod-ip> -p <port>
-
-# Navigate to workspace
-cd /workspace
+ssh root@<your-runpod-ip>
 ```
 
-### Step 2: Upload/Clone Project Files
+## 📦 Step 2: Upload and Install
 
-**Option A: Clone from Git**
+### 2.1 Upload Files to RunPod
 ```bash
-git clone <your-repo-url> lightrag-support
-cd lightrag-support
+# On your local machine
+scp -r ./* root@<your-runpod-ip>:/workspace/lightrag-setup/
+
+# Or use RunPod's file browser to upload
 ```
 
-**Option B: Upload via SCP**
+### 2.2 Run Installation
 ```bash
-# On your local machine:
-scp -P <port> -r ./* root@<runpod-ip>:/workspace/lightrag-support/
+# On RunPod instance
+cd /workspace/lightrag-setup
 
-# Then on RunPod:
-cd /workspace/lightrag-support
-```
-
-### Step 3: Configure Environment
-
-```bash
-# Copy template
-cp .env.example .env
-
-# Edit configuration
-nano .env
-
-# IMPORTANT: Change these values:
-# - POSTGRES_PASSWORD=your_secure_password_here
-# - Adjust GPU settings if needed
-```
-
-### Step 4: Deploy Services
-
-```bash
 # Make scripts executable
-chmod +x *.sh
+chmod +x install.sh setup_postgres.sh
+chmod +x start_services.py stop_services.py
 
-# Deploy all services (takes 5-10 minutes on first run)
-bash deploy-runpod.sh
+# Run installation (takes 5-10 minutes)
+bash install.sh
 ```
 
-This script will:
-1. ✅ Create Docker network
-2. ✅ Start PostgreSQL with pgvector
-3. ✅ Start vLLM (Typhoon 2.5) - downloads ~20GB model
-4. ✅ Start BGE-M3 Embedding - downloads ~2GB model
-5. ✅ Start BGE Reranker - downloads ~1GB model
-6. ✅ Start LightRAG Server
+**What gets installed:**
+- LightRAG from GitHub
+- vLLM for GPU-accelerated LLM inference
+- Sentence Transformers for embeddings
+- FlagEmbedding for reranking
+- PostgreSQL with pgvector
+- FastAPI for API servers
 
-### Step 5: Verify Deployment
+## 🗄️ Step 3: Setup PostgreSQL
 
 ```bash
-# Check all services
-bash status-runpod.sh
+# Start PostgreSQL
+sudo service postgresql start
 
-# Or manually:
-docker ps
-curl http://localhost:9621/health
+# Setup database and user
+bash setup_postgres.sh
+
+# Verify it's running
+pg_isready
+```
+
+## ⚙️ Step 4: Configure Services
+
+### 4.1 Check GPU
+```bash
+nvidia-smi
+
+# You should see RTX Pro 6000 with 96GB VRAM
+```
+
+### 4.2 Adjust Memory (Optional)
+
+Edit `start_services.py` if needed:
+
+```python
+# For vLLM service, adjust:
+"--gpu-memory-utilization", "0.5",  # Use 40-50GB (adjust 0.3-0.7)
+"--max-model-len", "32768",         # Context length
+```
+
+**Memory allocation guide:**
+```
+Total 96GB VRAM:
+- vLLM (0.5 utilization): ~40-48GB
+- BGE-M3 Embedding: ~3-4GB
+- BGE Reranker: ~2GB
+- Buffer: ~40GB free for scaling
+```
+
+## 🚀 Step 5: Start Services
+
+### 5.1 Launch All Services
+```bash
+python start_services.py
+
+# Or start specific services when prompted:
+# 1. All services (recommended)
+# 2. vLLM only
+# 3. Embedding + Reranker only
+# 4. LightRAG only
+```
+
+### 5.2 What Happens
+
+The script will:
+1. ✅ Check PostgreSQL is running
+2. 🚀 Start vLLM server (port 8000) - downloads Typhoon 2.5 (~20GB)
+3. 🧠 Start embedding server (port 8001) - downloads BGE-M3 (~2GB)
+4. 🎯 Start reranker server (port 8002) - downloads Reranker (~1GB)
+5. 🌐 Start LightRAG server (port 9621)
+
+**First run takes 10-15 minutes** to download all models.
+
+### 5.3 Monitor Services
+
+```bash
+# View all running sessions
+tmux list-sessions
+
+# Check logs in real-time
+tail -f /workspace/lightrag-support/logs/vllm.log
+tail -f /workspace/lightrag-support/logs/embedding.log
+tail -f /workspace/lightrag-support/logs/reranker.log
+tail -f /workspace/lightrag-support/logs/lightrag.log
+
+# Attach to a service (Ctrl+B then D to detach)
+tmux attach -t vllm-server
+tmux attach -t embedding-server
+tmux attach -t reranker-server
+tmux attach -t lightrag-server
+```
+
+## 🧪 Step 6: Test Your Setup
+
+### 6.1 Health Check
+```bash
+# Check vLLM
 curl http://localhost:8000/health
+
+# Check embedding
 curl http://localhost:8001/health
+
+# Check reranker
+curl http://localhost:8002/health
+
+# Check LightRAG
+curl http://localhost:9621/health
 ```
 
-### Step 6: Monitor First Startup
-
+### 6.2 Test with Python Client
 ```bash
-# Watch logs to see model downloads
-docker logs -f lightrag-vllm      # Typhoon 2.5 loading
-docker logs -f lightrag-embedding  # BGE-M3 loading
-docker logs -f lightrag-server     # LightRAG startup
+# Make sure you're in the working directory
+cd /workspace/lightrag-support
 
-# Monitor GPU usage
-watch -n 1 nvidia-smi
-```
-
-### Step 7: Test the System
-
-```bash
-# Run the example client
+# Run example client
 python api_client_example.py
-
-# Or test with curl
-curl -X POST http://localhost:9621/v1/query \
-  -H "Content-Type: application/json" \
-  -d '{"query": "Hello", "mode": "hybrid"}'
 ```
 
-## 🛠️ Management Scripts
-
-### Check Status
+### 6.3 Access Web UI
 ```bash
-bash status-runpod.sh
-```
-Shows:
-- Container status
-- Health checks
-- GPU usage
-- Access points
+# Open in your browser
+http://<your-runpod-ip>:9621
 
-### Stop Services
-```bash
-bash stop-runpod.sh
-```
-Stops all containers but **preserves data**.
-
-### Restart Services
-```bash
-bash deploy-runpod.sh
-```
-Re-deploys everything (data is preserved).
-
-### Clean Up Everything
-```bash
-bash cleanup-runpod.sh
-```
-⚠️ **WARNING**: Deletes all data including models, database, and documents.
-
-## 📊 Service Ports
-
-| Service | Port | URL |
-|---------|------|-----|
-| LightRAG API | 9621 | http://localhost:9621 |
-| LightRAG Docs | 9621 | http://localhost:9621/docs |
-| vLLM | 8000 | http://localhost:8000 |
-| Embedding | 8001 | http://localhost:8001 |
-| Reranker | 8002 | http://localhost:8002 |
-| PostgreSQL | 5432 | localhost:5432 |
-
-## 🔧 Configuration Tuning for RunPod
-
-### GPU Memory Optimization
-
-Edit `deploy-runpod.sh` to adjust GPU allocation:
-
-```bash
-# For RTX Pro 6000 (96GB VRAM)
-
-# Option 1: High Quality (uses more GPU memory)
---gpu-memory-utilization 0.7
---max-model-len 32768
-
-# Option 2: Balanced (default)
---gpu-memory-utilization 0.4
---max-model-len 32768
-
-# Option 3: High Throughput (more concurrent users)
---gpu-memory-utilization 0.3
---max-model-len 16384
+# You should see LightRAG Web UI
 ```
 
-### Check GPU Usage
+## 📊 Step 7: Monitor GPU Usage
 
 ```bash
-# Real-time monitoring
+# Watch GPU in real-time
 watch -n 1 nvidia-smi
 
-# Memory usage by container
-nvidia-smi --query-compute-apps=pid,process_name,used_memory --format=csv
+# Expected GPU usage:
+# Initial (idle): 25-35GB
+# During queries: 35-50GB
 ```
 
-## 🐛 Troubleshooting RunPod
+## 📚 Step 8: Index Your Documents
 
-### Issue: "Cannot connect to Docker daemon"
+### 8.1 Via Python API
+```python
+from api_client_example import CustomerSupportRAG
 
-```bash
-# Start Docker service
-service docker start
+client = CustomerSupportRAG("http://localhost:9621")
 
-# Or restart Docker
-service docker restart
+# Check connection
+if client.health_check():
+    print("✅ Connected!")
+
+# Index Thai document
+thai_doc = """
+สินค้า: AI Chat Support Pro
+ฟีเจอร์:
+- รองรับภาษาไทยและอังกฤษ
+- ตอบคำถามอัตโนมัติ 24/7
+- ใช้เทคโนโลยี RAG
+"""
+
+client.index_documents([thai_doc], doc_ids=["product-th-001"])
+
+# Query in Thai
+answer = client.query("สินค้านี้มีฟีเจอร์อะไรบ้าง?", mode="hybrid")
+print(answer['response'])
 ```
 
-### Issue: "Out of GPU memory"
+### 8.2 Via Web UI
+1. Go to `http://<your-ip>:9621`
+2. Upload documents via the interface
+3. Wait for indexing to complete
+4. Start querying!
 
+## 🛑 Step 9: Manage Services
+
+### Stop All Services
 ```bash
-# Stop services
-bash stop-runpod.sh
-
-# Edit deploy-runpod.sh, find vLLM section, change:
---gpu-memory-utilization 0.3  # Reduce from 0.4
-
-# Redeploy
-bash deploy-runpod.sh
+python stop_services.py
 ```
 
-### Issue: "Models downloading slowly"
-
-RunPod usually has good bandwidth, but if slow:
-
+### Stop Individual Service
 ```bash
-# Check download progress
-docker logs -f lightrag-vllm
-
-# The models are cached in ./models/
-# If interrupted, just restart - it will resume
+tmux kill-session -t vllm-server
+tmux kill-session -t embedding-server
+tmux kill-session -t reranker-server
+tmux kill-session -t lightrag-server
 ```
 
-### Issue: "Service not starting"
-
+### Restart a Service
 ```bash
-# Check logs for specific service
-docker logs lightrag-server
-docker logs lightrag-vllm
-docker logs lightrag-postgres
+# Stop it first
+tmux kill-session -t vllm-server
 
-# Check if port is already in use
-netstat -tlnp | grep 9621
-
-# Remove conflicting container
-docker rm -f <container-name>
+# Start again
+python start_services.py
+# Then select option 2 (vLLM only)
 ```
 
-### Issue: "PostgreSQL connection failed"
-
+### View Service Logs
 ```bash
-# Check if PostgreSQL is running
-docker exec lightrag-postgres pg_isready -U lightrag
-
-# If not, check logs
-docker logs lightrag-postgres
-
-# Restart PostgreSQL
-docker restart lightrag-postgres
-```
-
-## 🔐 Security on RunPod
-
-### Change Default Password
-
-```bash
-# Edit .env
-nano .env
-
-# Change:
-POSTGRES_PASSWORD=your_very_secure_password_here
-
-# Redeploy
-bash deploy-runpod.sh
-```
-
-### Expose to Public Internet (Optional)
-
-RunPod provides public URLs. To expose your service:
-
-1. **Option 1: Use RunPod's HTTP Ports**
-   - Configure in RunPod dashboard
-   - Map port 9621 to public HTTP port
-
-2. **Option 2: Use SSH Tunneling**
-   ```bash
-   # On your local machine:
-   ssh -L 9621:localhost:9621 root@<runpod-ip> -p <port>
-
-   # Access at: http://localhost:9621
-   ```
-
-3. **Option 3: Add nginx reverse proxy**
-   ```bash
-   # Install nginx
-   apt-get update && apt-get install -y nginx
-
-   # Configure reverse proxy (see DEPLOYMENT_GUIDE.md)
-   ```
-
-## 💰 RunPod Cost Optimization
-
-### Pause When Not in Use
-
-```bash
-# Stop all services before pausing RunPod instance
-bash stop-runpod.sh
-
-# Data is preserved in:
-# - Docker volume: postgres_data
-# - Directories: ./models, ./lightrag_data, ./documents
-```
-
-When you resume:
-```bash
-# Models are already downloaded, starts quickly
-bash deploy-runpod.sh
-```
-
-### Use Spot Instances
-
-- Models and data are in `/workspace` which persists
-- If spot instance terminates, data is preserved
-- Just redeploy on new instance: `bash deploy-runpod.sh`
-
-### Reduce Model Size (Advanced)
-
-If 96GB is too expensive, use smaller models:
-
-```bash
-# Edit deploy-runpod.sh, change:
---model scb10x/typhoon-v2.5-instruct  # Current: ~40GB
-
-# To smaller model:
---model microsoft/phi-3-medium-4k-instruct  # ~8GB
-# or
---model mistralai/Mistral-7B-Instruct-v0.2  # ~14GB
-```
-
-## 📱 Accessing from Outside RunPod
-
-### Method 1: RunPod Proxy (Easiest)
-
-RunPod provides HTTP port forwarding:
-1. Go to RunPod dashboard
-2. Find your pod
-3. Look for "HTTP Service" ports
-4. Access via: `https://<pod-id>-9621.proxy.runpod.net`
-
-### Method 2: SSH Tunnel (Most Secure)
-
-```bash
-# On your local machine:
-ssh -N -L 9621:localhost:9621 root@<runpod-ip> -p <port>
-
-# Access at: http://localhost:9621
-```
-
-### Method 3: Tailscale VPN (Advanced)
-
-Install Tailscale on RunPod for private network access.
-
-## 🎓 Alternative Deployment Options
-
-### Option A: Install docker-compose
-
-If you prefer docker-compose:
-
-```bash
-# Install docker-compose
-bash install-docker-compose.sh
-
-# Use docker-compose
-source ~/.bashrc
-docker-compose up -d
-```
-
-### Option B: Manual Installation (No Docker)
-
-See `MANUAL_INSTALL.md` for Python virtual environment setup (advanced).
-
-## 📞 Support & Logs
-
-### View Logs
-
-```bash
-# All services
-docker logs -f lightrag-server
-docker logs -f lightrag-vllm
-docker logs -f lightrag-embedding
-docker logs -f lightrag-reranker
-docker logs -f lightrag-postgres
+# Real-time logs
+tail -f /workspace/lightrag-support/logs/vllm.log
 
 # Last 100 lines
-docker logs --tail 100 lightrag-server
+tail -n 100 /workspace/lightrag-support/logs/lightrag.log
+
+# Search logs
+grep "error" /workspace/lightrag-support/logs/*.log
 ```
 
-### Export Logs
+## 🔧 Step 10: Optimization
 
+### 10.1 For Maximum Quality
+```python
+# Edit start_services.py, vLLM config:
+"--gpu-memory-utilization", "0.7",  # Use more GPU
+"--max-model-len", "32768",
+```
+
+### 10.2 For High Throughput
+```python
+# Edit start_services.py, vLLM config:
+"--gpu-memory-utilization", "0.4",  # Use less GPU per request
+"--max-model-len", "16384",         # Shorter context
+"--max-num-seqs", "16",             # More parallel requests
+```
+
+### 10.3 Use Different Model
+```python
+# Edit start_services.py, change model:
+"--model", "your-model-name",
+# Example: "openthaigpt/openthaigpt-1.0.0-beta-13b-chat"
+```
+
+## 🐛 Troubleshooting
+
+### Problem: GPU Not Detected
 ```bash
-# Save logs to file
-docker logs lightrag-server > lightrag-server.log 2>&1
-docker logs lightrag-vllm > vllm.log 2>&1
+# Check CUDA
+nvidia-smi
+
+# Check PyTorch can see GPU
+python -c "import torch; print(torch.cuda.is_available())"
+
+# If False, reinstall PyTorch:
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 ```
 
-### Get Help
+### Problem: Out of Memory
+```bash
+# Check GPU usage
+nvidia-smi
 
-1. Check logs first: `docker logs <container-name>`
-2. Check status: `bash status-runpod.sh`
-3. Check GPU: `nvidia-smi`
-4. Review this guide's troubleshooting section
+# Reduce vLLM memory in start_services.py:
+"--gpu-memory-utilization", "0.3",  # Lower value
+```
 
-## ✅ Deployment Checklist
+### Problem: vLLM Won't Start
+```bash
+# Check logs
+cat /workspace/lightrag-support/logs/vllm.log
 
-- [ ] RunPod instance with GPU (RTX Pro 6000 or similar)
-- [ ] At least 200GB storage available
-- [ ] Uploaded all project files
-- [ ] Created `.env` from `.env.example`
-- [ ] Changed `POSTGRES_PASSWORD` in `.env`
-- [ ] Made scripts executable: `chmod +x *.sh`
-- [ ] Ran: `bash deploy-runpod.sh`
-- [ ] Verified: `bash status-runpod.sh`
-- [ ] Tested: `curl http://localhost:9621/health`
-- [ ] Tested API: `python api_client_example.py`
+# Common fix: Model not found
+# Make sure model name is correct in start_services.py
+
+# Try with smaller model:
+"--model", "scb10x/llama-3-typhoon-v1.5x-8b-instruct",
+```
+
+### Problem: Service Not Responding
+```bash
+# Check if process is running
+tmux list-sessions
+
+# Check logs for errors
+tail -n 50 /workspace/lightrag-support/logs/<service>.log
+
+# Restart the service
+tmux kill-session -t <service-name>
+python start_services.py
+```
+
+### Problem: PostgreSQL Connection Failed
+```bash
+# Check if PostgreSQL is running
+sudo service postgresql status
+
+# Start it
+sudo service postgresql start
+
+# Check connection
+pg_isready -h localhost -p 5432 -U lightrag
+```
+
+### Problem: Slow Response
+```bash
+# Check GPU usage
+nvidia-smi
+
+# Check if GPU is actually being used
+# vLLM log should show: "Using GPU"
+
+# Increase parallel processing
+# Edit start_services.py vLLM:
+"--max-num-batched-tokens", "8192",
+```
+
+## 🌐 Production Deployment
+
+### Enable Public Access
+```bash
+# Make sure RunPod ports are exposed
+# In RunPod dashboard: Edit Pod → TCP Ports
+# Add: 9621 (LightRAG UI)
+```
+
+### Add SSL/TLS (Optional)
+```bash
+# Install Caddy
+apt install -y caddy
+
+# Create Caddyfile
+cat > /etc/caddy/Caddyfile << EOF
+:443 {
+    reverse_proxy localhost:9621
+    tls internal
+}
+EOF
+
+# Start Caddy
+systemctl start caddy
+```
+
+### Secure PostgreSQL
+```bash
+# Change password
+sudo -u postgres psql -c "ALTER USER lightrag PASSWORD 'your-strong-password';"
+
+# Update in lightrag_server.py:
+os.environ["POSTGRES_PASSWORD"] = "your-strong-password"
+```
+
+## 📈 Performance Tips
+
+### For RTX Pro 6000 (96GB):
+
+**Best Practices:**
+1. Start with `gpu-memory-utilization=0.5` (balanced)
+2. Monitor with `nvidia-smi` during usage
+3. Adjust based on concurrent user count
+4. Use reranker for better quality results
+5. Enable LLM caching for faster responses
+
+**Benchmarks (estimated):**
+- Model loading: 2-3 minutes
+- Document indexing: 10-30s per document
+- Query response: 2-5 seconds
+- Concurrent users: 10-20+
+
+## 🔐 Security Checklist
+
+- [ ] Changed PostgreSQL password
+- [ ] Services bound to localhost (use reverse proxy for public)
+- [ ] Setup firewall rules
+- [ ] Enable authentication on LightRAG API
+- [ ] Regular backups of PostgreSQL
+- [ ] Monitor logs for suspicious activity
+- [ ] Keep dependencies updated
+
+## 📞 Quick Reference
+
+### Service Ports
+```
+8000 - vLLM (Typhoon 2.5)
+8001 - BGE-M3 Embeddings
+8002 - BGE Reranker
+9621 - LightRAG Server + Web UI
+5432 - PostgreSQL
+```
+
+### Important Paths
+```
+/workspace/lightrag-support/          - Main directory
+/workspace/lightrag-support/logs/     - Service logs
+/workspace/lightrag-support/LightRAG/ - LightRAG source
+/workspace/lightrag-support/lightrag_data/ - RAG data
+```
+
+### Key Commands
+```bash
+# Start all
+python start_services.py
+
+# Stop all
+python stop_services.py
+
+# View logs
+tail -f logs/<service>.log
+
+# Check GPU
+nvidia-smi
+
+# List sessions
+tmux list-sessions
+
+# Attach to service
+tmux attach -t <service-name>
+```
 
 ## 🎉 You're Done!
 
-Your LightRAG Customer Support system is now running on RunPod with:
-- ✅ No docker-compose required
+Your LightRAG customer support system is now running on RunPod with:
+- ✅ Typhoon 2.5 LLM (Thai + English)
 - ✅ GPU-accelerated inference
-- ✅ Multilingual support (Thai + English)
-- ✅ Automatic model downloads
-- ✅ Persistent data storage
-- ✅ Easy management scripts
+- ✅ Multilingual embeddings
+- ✅ Smart reranking
+- ✅ Persistent storage
+- ✅ Easy management via tmux
 
-Access your system at: **http://localhost:9621** (or via RunPod proxy URL)
+Start indexing your documents and let your customers ask questions! 🚀
+
+## 💡 Next Steps
+
+1. Index your product documentation
+2. Test with real customer questions
+3. Monitor performance and adjust GPU settings
+4. Setup backups for PostgreSQL
+5. Consider adding authentication
+6. Integrate with your existing systems
+
+Need help? Check the logs and troubleshooting section above! 📚
