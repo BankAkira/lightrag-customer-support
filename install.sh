@@ -31,8 +31,7 @@ pip install openai  # For OpenAI-compatible API
 echo "🧠 Step 5: Installing embedding & reranker dependencies..."
 pip install sentence-transformers
 pip install FlagEmbedding
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu129
 echo "🗄️ Step 6: Installing PostgreSQL Python drivers..."
 pip install psycopg2-binary asyncpg pgvector
 
