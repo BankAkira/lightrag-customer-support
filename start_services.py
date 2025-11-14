@@ -50,7 +50,7 @@ SERVICES = {
     "lightrag": {
         "name": "lightrag-server",
         "command": [
-            "python", "-m", "lightrag_server"
+            "python", "lightrag_server.py"
         ],
         "log": "lightrag.log",
         "health_url": "http://localhost:9621/health"

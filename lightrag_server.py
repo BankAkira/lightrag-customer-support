@@ -6,6 +6,7 @@ Configures and starts LightRAG server with custom settings
 
 import os
 import sys
+import subprocess
 
 # Set environment variables before importing LightRAG
 os.environ["LLM_MODEL_NAME"] = "scb10x/typhoon-v2.5-instruct"
@@ -41,7 +42,7 @@ os.environ["ENTITY_TYPES"] = '["organization", "person", "product", "service", "
 os.environ["HOST"] = "0.0.0.0"
 os.environ["PORT"] = "9621"
 
-# Now import and run LightRAG server
+# Now start LightRAG server
 try:
     # Create working directory if doesn't exist
     os.makedirs(os.environ["WORKING_DIR"], exist_ok=True)
@@ -53,13 +54,14 @@ try:
     print(f"   Port: {os.environ['PORT']}")
     print()
     
-    # Import and run the LightRAG server
-    from lightrag.server import start_server
-    start_server()
+    # Run lightrag-server command (installed with LightRAG)
+    subprocess.run(["lightrag-server"], check=True)
     
-except ImportError as e:
-    print(f"❌ Failed to import LightRAG server: {e}")
-    print("   Make sure LightRAG is installed: pip install -e LightRAG/")
+except FileNotFoundError:
+    print("❌ lightrag-server command not found!")
+    print("   Make sure LightRAG is installed: cd LightRAG && pip install -e .[api]")
+    print("   Or try running from LightRAG directory:")
+    print("   cd /workspace/lightrag-support/LightRAG && python -m lightrag.server")
     sys.exit(1)
 except Exception as e:
     print(f"❌ Error starting LightRAG server: {e}")

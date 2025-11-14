@@ -25,13 +25,15 @@ pip install -e ".[api]"
 cd ..
 
 echo "⚡ Step 4: Installing vLLM for Typhoon 2.5..."
-pip install vllm==0.5.4
+# Install compatible vLLM version for your PyTorch/CUDA
+pip install vllm==0.5.4 --no-build-isolation
 pip install openai  # For OpenAI-compatible API
 
 echo "🧠 Step 5: Installing embedding & reranker dependencies..."
 pip install sentence-transformers
 pip install FlagEmbedding
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu129
+
 echo "🗄️ Step 6: Installing PostgreSQL Python drivers..."
 pip install psycopg2-binary asyncpg pgvector
 
