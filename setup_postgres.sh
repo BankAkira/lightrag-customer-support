@@ -5,6 +5,11 @@ set -e
 
 echo "🗄️ Setting up PostgreSQL for LightRAG..."
 
+# Install pgvector extension
+echo "📦 Installing pgvector extension..."
+apt-get update
+apt-get install -y postgresql-16-pgvector || apt-get install -y postgresql-pgvector
+
 # Start PostgreSQL service
 echo "Starting PostgreSQL service..."
 sudo service postgresql start
