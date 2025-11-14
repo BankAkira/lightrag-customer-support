@@ -25,7 +25,7 @@ pip install -e ".[api]"
 cd ..
 
 echo "⚡ Step 4: Installing vLLM for Typhoon 2.5..."
-pip install vllm==0.6.3
+pip install vllm==0.5.4
 pip install openai  # For OpenAI-compatible API
 
 echo "🧠 Step 5: Installing embedding & reranker dependencies..."
